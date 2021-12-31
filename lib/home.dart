@@ -3,6 +3,7 @@ import 'package:aprendendo_sql/model/note.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
+import 'package:sqflite/sqflite.dart';
 
 class home extends StatefulWidget {
   const home({Key? key}) : super(key: key);
@@ -16,9 +17,6 @@ class _homeState extends State<home> {
 
   TextEditingController _tituloController = TextEditingController();
   TextEditingController _descricaoController = TextEditingController();
-
-  TextEditingController _editarTituloController = TextEditingController();
-  TextEditingController _editarDescricaoController = TextEditingController();
 
   List<Note> _notes = [];
 
@@ -42,96 +40,95 @@ class _homeState extends State<home> {
     notes = [];
   }
 
-  _editarNotaDB(int index, String titulo, String descricao, String date)async {
-    String old_date = _notes[index].date;
-    int id = await _db.updateNote(titulo, descricao, date, old_date);
+  _mostrarTelaCadastro( {Note? note} ){
 
-    _recuperarNotas();
-  }
+    String _actionName = "";
 
-  _adicionarNota() async {
-    String _titulo = _tituloController.text;
-    String _descricao = _descricaoController.text;
+    if(note == null){
+      // salvar
+      _actionName = "Salvar";
 
-    int result = await _db.insertNote(Note(
-        title: _titulo,
-        description: _descricao,
-        date: DateTime.now().toString()));
-    print("Resultado/id = $result");
-
-    _tituloController.clear();
-    _descricaoController.clear();
-
-    _recuperarNotas();
-  }
-
-  _editarNota(int index){
-
-    _editarTituloController.text = _notes[index].title;
-    _editarDescricaoController.text = _notes[index].description;
+    }else{
+      // editar
+      _actionName = "Atualizar";
+      _tituloController.text = note.title;
+      _descricaoController.text = note.description;
+    }
 
     showDialog(
-        context: context,
-        builder: (context_dialog) {
-          return AlertDialog(
-            title: Text("Editar nota"),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: _editarTituloController,
+      context: context,
+      builder: (context_dialog) {
+        return AlertDialog(
+          title: Text("$_actionName nota"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: _tituloController,
+                decoration: InputDecoration(
+                    label: Text("Título")),
+              ),
+              TextField(
+                  controller: _descricaoController,
                   decoration: InputDecoration(
-                      label: Text("Título")),
-                ),
-                TextField(
-                    controller: _editarDescricaoController,
-                    decoration: InputDecoration(
-                        label: Text("Descrição")
-                    ))
+                      label: Text("Descrição")
+                  ))
 
-              ],
-            ),
-            actions: [
-              FlatButton(
-                  onPressed: () {
-                    if (_editarTituloController.text.isEmpty || _editarDescricaoController.text.isEmpty) {
-                      Scaffold.of(context).showSnackBar(SnackBar(
-                          content: Row(
-                            children: [
-                              Icon(Icons.warning),
-                              Padding(
-                                padding: EdgeInsets.only(left: 16),
-                                child: Text(
-                                    "O título e descrição não podem estar vazios!"),
-                              )
-                            ],
-                          )));
-                      Navigator.pop(context_dialog);
-                    } else {
-                      _editarNotaDB(index, _editarTituloController.text, _editarDescricaoController.text, DateTime.now().toString());
-                    }
-                    _editarTituloController.clear();
-                    _editarDescricaoController.clear();
-                    Navigator.pop(context_dialog);
-                  },
-                  child: Text("Salvar")),
-              FlatButton(
-                  onPressed: () {
-                    _editarTituloController.clear();
-                    _editarDescricaoController.clear();
-                    Navigator.pop(context_dialog);
-                  },
-                  child: Text("Cancelar"))
             ],
-          );
-        },
+          ),
+          actions: [
+            FlatButton(
+                onPressed: () {
+                  // confirmar
+                  _tituloController.clear();
+                  _descricaoController.clear();
+                  Navigator.pop(context_dialog);
+                },
+                child: Text(_actionName)),
+            FlatButton(
+                onPressed: () {
+                  _tituloController.clear();
+                  _descricaoController.clear();
+                  Navigator.pop(context_dialog);
+                },
+                child: Text("Cancelar"))
+          ],
+        );
+      },
     );
 
 
   }
 
-  _deletarNota(int index){
+  _adicionarNota({Note? note}) async {
 
+
+    if(note == null){
+      //salvar
+      String _titulo = _tituloController.text;
+      String _descricao = _descricaoController.text;
+
+      int result = await _db.insertNote(Note(
+          title: _titulo,
+          description: _descricao,
+          date: DateTime.now().toString()));
+      print("Resultado/id = $result");
+
+      _tituloController.clear();
+      _descricaoController.clear();
+    }else{
+      //editar
+
+      Database db = await _db.database;
+      await db.update(tableNotes, note.toMap(), where: "id = ?", whereArgs: [note.id]);
+
+    }
+
+    _recuperarNotas();
+  }
+
+  _deletarNota(int index){
+    print("Deletar nota ${_notes[index].title}");
   }
 
   _formatarData(String data) {
@@ -174,7 +171,7 @@ class _homeState extends State<home> {
                   switch (direction) {
                     case DismissDirection.endToStart:
                       //print("Editar");
-                      _editarNota(index);
+                      _mostrarTelaCadastro(note: _notes[index]);
                       break;
                     case DismissDirection.startToEnd:
                       //print("Deletar");
