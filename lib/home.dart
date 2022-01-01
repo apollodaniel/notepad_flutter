@@ -15,15 +15,17 @@ class home extends StatefulWidget {
 class _homeState extends State<home> {
   var _db = NotesDatabase();
 
+  final _appTitle = "Anotações";
+
   TextEditingController _tituloController = TextEditingController();
   TextEditingController _descricaoController = TextEditingController();
 
-  List<Note> _notes = [];
+  List<Note> _notes = <Note>[];
 
   _recuperarNotas() async {
     List resultado = await _db.getNotes();
 
-    List<Note> notes = [];
+    List<Note> notes = <Note>[];
 
     for (var i in resultado) {
       Note note = Note(
@@ -36,20 +38,21 @@ class _homeState extends State<home> {
     setState(() {
       _notes = notes;
     });
-
-    notes = [];
   }
 
-  _mostrarTelaCadastro( {Note? note} ){
-
+  _mostrarTelaCadastro({Note? note, required int index}) {
     String _actionName = "";
 
-    if(note == null){
+    bool isAtualizar = false;
+
+    if (note == null) {
       // salvar
       _actionName = "Salvar";
-
-    }else{
+      _tituloController.clear();
+      _descricaoController.clear();
+    } else {
       // editar
+      isAtualizar = true;
       _actionName = "Atualizar";
       _tituloController.text = note.title;
       _descricaoController.text = note.description;
@@ -65,23 +68,18 @@ class _homeState extends State<home> {
             children: [
               TextField(
                 controller: _tituloController,
-                decoration: InputDecoration(
-                    label: Text("Título")),
+                decoration: InputDecoration(label: Text("Título")),
               ),
               TextField(
                   controller: _descricaoController,
-                  decoration: InputDecoration(
-                      label: Text("Descrição")
-                  ))
-
+                  decoration: InputDecoration(label: Text("Descrição")))
             ],
           ),
           actions: [
             FlatButton(
                 onPressed: () {
                   // confirmar
-                  _tituloController.clear();
-                  _descricaoController.clear();
+                  _adicionarNota(isAtualizar: isAtualizar, index: index);
                   Navigator.pop(context_dialog);
                 },
                 child: Text(_actionName)),
@@ -96,14 +94,19 @@ class _homeState extends State<home> {
         );
       },
     );
-
-
   }
 
-  _adicionarNota({Note? note}) async {
+  _adicionarNota({required bool isAtualizar, required int index}) async {
+    if (isAtualizar) {
+      //editar
 
-
-    if(note == null){
+      Note note = Note(
+          title: _tituloController.text,
+          description: _descricaoController.text,
+          date: DateTime.now().toString());
+      int id = await _db.updateNote(note, _notes[index].date);
+      print("ID: $id");
+    } else {
       //salvar
       String _titulo = _tituloController.text;
       String _descricao = _descricaoController.text;
@@ -113,22 +116,55 @@ class _homeState extends State<home> {
           description: _descricao,
           date: DateTime.now().toString()));
       print("Resultado/id = $result");
-
-      _tituloController.clear();
-      _descricaoController.clear();
-    }else{
-      //editar
-
-      Database db = await _db.database;
-      await db.update(tableNotes, note.toMap(), where: "id = ?", whereArgs: [note.id]);
-
     }
 
+    _tituloController.clear();
+    _descricaoController.clear();
     _recuperarNotas();
   }
 
-  _deletarNota(int index){
-    print("Deletar nota ${_notes[index].title}");
+  _deletarNota(int index) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Center(
+            child: Row(
+              children: [
+                Icon(Icons.warning),
+                Padding(
+                  padding: EdgeInsets.only(left: 16),
+                  child: Text("Aviso"),
+                )
+              ],
+            ),
+          ),
+          content: Text("Você realmente deseja apagar a nota \"${_notes[index].title}\"?"),
+          contentPadding: EdgeInsets.all(32),
+          actions: [
+
+            FlatButton(
+                onPressed: (){
+                  _recuperarNotas();
+                  Navigator.pop(context);
+                },
+                child: Text("Cancelar")
+            ),
+            FlatButton(
+                onPressed: () async {
+                  int result = await _db.deleteNote(_notes[index].date.toString());
+                  _recuperarNotas();
+                  Navigator.pop(context);
+                  print('nota deletada $result');
+                },
+                child: Text("Apagar")
+            ),
+          ],
+        );
+      },
+    );
+
+
   }
 
   _formatarData(String data) {
@@ -160,7 +196,7 @@ class _homeState extends State<home> {
     //adicionarNota();
     return Scaffold(
       appBar: AppBar(
-        title: Text("Aprendendo sqlite!"),
+        title: Text(_appTitle),
       ),
       body: Container(
         child: ListView.builder(
@@ -171,7 +207,8 @@ class _homeState extends State<home> {
                   switch (direction) {
                     case DismissDirection.endToStart:
                       //print("Editar");
-                      _mostrarTelaCadastro(note: _notes[index]);
+                      _mostrarTelaCadastro(note: _notes[index], index: index);
+                      _recuperarNotas();
                       break;
                     case DismissDirection.startToEnd:
                       //print("Deletar");
@@ -267,7 +304,8 @@ class _homeState extends State<home> {
                 actions: [
                   FlatButton(
                       onPressed: () {
-                        if (_tituloController.text.isEmpty || _descricaoController.text.isEmpty) {
+                        if (_tituloController.text.isEmpty ||
+                            _descricaoController.text.isEmpty) {
                           Scaffold.of(context).showSnackBar(SnackBar(
                               content: Row(
                             children: [
@@ -281,7 +319,7 @@ class _homeState extends State<home> {
                           )));
                           Navigator.pop(context_dialog);
                         } else {
-                          _adicionarNota();
+                          _adicionarNota(isAtualizar: false, index: 0);
                         }
                         Navigator.pop(context_dialog);
                       },

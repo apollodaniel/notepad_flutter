@@ -42,14 +42,9 @@ class NotesDatabase{
     return id;
   }
 
-  updateNote(String title, String description, String date, String old_date)async{
+  updateNote(Note note, String old_date)async{
     Database db = await instance.database;
-
-    String sql = "UPDATE $tableNotes SET ${NoteFields.title} = $title, ${NoteFields.description} = $description, ${NoteFields.date} = '$date' WHERE ${NoteFields.date} = '$old_date'";
-
-    int result = await db.rawUpdate(sql);
-
-    print("s");
+    int result = await db.update(tableNotes, note.toMap(),  where: "date = ?", whereArgs: [old_date]);
     return result;
   }
 
@@ -58,6 +53,12 @@ class NotesDatabase{
    Database db = await instance.database;
    List result = await db.rawQuery(sql);
    return result;
+  }
+
+  deleteNote(String date) async{
+    Database db = await instance.database;
+    int result = await db.delete(tableNotes, where: "date = ?", whereArgs: [date]);
+    return result;
   }
 
   Future close() async{

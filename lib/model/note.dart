@@ -6,6 +6,7 @@ class NoteFields{
   static final String description = "description";
   static final String title = "title";
   static final String date = "date";
+  static final String date_id = "dateid";
 }
 
 class Note{
