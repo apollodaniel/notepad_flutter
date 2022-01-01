@@ -1,16 +1,15 @@
-# aprendendo_sql
+# Notepad
 
-sql com gringo
+This is an notepad app made in flutter
 
-## Getting Started
+## Getting started
 
-This project is a starting point for a Flutter application.
+The app consists of a common notepad app like all others, with functions like adding notes, removing, and editing existing ones.
 
-A few resources to get you started if this is your first Flutter project:
+To store the notes sqlite was used.
 
-- [Lab: Write your first Flutter app](https://flutter.dev/docs/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://flutter.dev/docs/cookbook)
+## Plugins
 
-For help getting started with Flutter, view our
-[online documentation](https://flutter.dev/docs), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+The plugins used were:
+- Sqflite: https://pub.dev/packages/sqflite
+- Intl: https://pub.dev/packages/intl
